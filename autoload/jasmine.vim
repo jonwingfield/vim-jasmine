@@ -1,6 +1,6 @@
 
 function! s:find_test_context()
-  let s:line_no = search('^\s\+\(it\|describe\|context\).\([''"]\).*\2', 'bcnW')
+  let s:line_no = search('^\s*\(it\|describe\|context\).\([''"]\).*\2', 'bcnW')
   if s:line_no 
     let line = getline(s:line_no) 
     let string = matchstr(line,'^\s*it.\([''"]\)\zs.*\ze\1')
