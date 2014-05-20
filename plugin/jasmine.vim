@@ -6,7 +6,7 @@ command! -bang RunTests call jasmine#RunTests()
 command! -bang RunTopLevelTest call jasmine#RunTopLevelTest()
 command! -bang RunTestInBrowser call jasmine#RunTestInBrowser()
 
-nnoremap <silent> <return> :call RunTests()<CR>
-nnoremap <silent> <S-return> :call RunTopLevelTest()<CR>
-nnoremap <silent> <leader>rt :call RunTestInBrowser()<CR>
+nnoremap <silent> <return> :call jasmine#RunTests()<CR>
+nnoremap <silent> <S-return> :call jasmine#RunTopLevelTest()<CR>
+nnoremap <silent> <leader>rt :call jasmine#RunTestInBrowser()<CR>
 
