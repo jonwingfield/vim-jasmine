@@ -56,6 +56,7 @@ function! jasmine#RunTestInBrowser()
 endfunction
 
 function! s:call_specrunner(test_name)
+	echo "running " . a:test_name
     let urlEncoded = substitute(a:test_name, "\\s", "%20", "g")
     let specRunnerPath = 'file:///C:/code/net/git/SMB/Source/Application/SMB/Scripts/app/test/SpecRunner.html'
     let result = xolox#misc#os#exec({'command': "ansicon phantomjs-1.9.7-windows\\phantomjs.exe phantomjs-testrunner.js \"" . specRunnerPath . "?spec=" . urlEncoded . "&console=1\"", 'check': 0})['stdout']
@@ -104,10 +105,14 @@ function! jasmine#RunTests()
     let test_name = s:find_test_context()
     call setpos('.', save_cursor)
     if (strlen(test_name))
-      echo "running " . test_name
+      let s:test_name = test_name
       call s:call_specrunner(test_name)
     else
-      echo "No test found to run"
+      if strlen(s:test_name)
+	  	  call s:call_specrunner(s:test_name)
+	    else
+      	echo "No test found to run"
+      endif
     end
   endif
 endfunction
@@ -116,10 +121,14 @@ function! jasmine#RunTopLevelTest()
   if (&filetype == "coffee" || &filetype == "javascript") 
     let test_name = s:find_top_level_test()
     if (strlen(test_name))
-      echo "running " . test_name
+      let s:test_name = test_name
       call s:call_specrunner(test_name)
     else
-      echo "No test found to run"
+      if strlen(s:test_name)
+	  	  call s:call_specrunner(s:test_name)
+	    else
+      	echo "No test found to run"
+      endif
     end
   endif
 endfunction
