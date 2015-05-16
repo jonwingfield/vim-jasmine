@@ -1,3 +1,6 @@
+let s:search_for = '\(describe\|context\).'
+let s:test_name_regex = s:search_for . '\([''"]\).*\2'
+let s:test_name_matcher = s:search_for . '\([''"]\)\zs.*\ze\2'
 
 function! s:find_test_context()
   let s:line_no = search('^\s*\(it\|describe\|context\).\([''"]\).*\2', 'bcnW')
@@ -16,24 +19,11 @@ function! s:find_test_context()
   endif
 endfunction
 
-let s:search_for = '\(describe\|context\).'
-
-function! s:find_top_level_test()
-  let s:line_no = search('^' . s:search_for . '"[^"]*"', 'bcnW')
-  if s:line_no
-    let line = getline(s:line_no)
-    let string = matchstr(line,'^' . s:search_for . '"\zs[^"]*\ze"')
-    return string
-  else
-    return ""
-  endif
-endfunction
-
 function! s:find_test_name_in_quotes(max_indent)
-  let s:line_no = search('^\s\{1,' . max([a:max_indent-1, 1]) . '}' . s:search_for . '"[^"]*"', 'bcnW')
+  let s:line_no = search('^\s\{1,' . max([a:max_indent-1, 1]) . '}' . s:test_name_regex, 'bcnW')
   if s:line_no && a:max_indent > 1
     let line = getline(s:line_no)
-    let string = matchstr(line,'^\s*' . s:search_for . '"\zs[^"]*\ze"')
+    let string = matchstr(line,'^\s*' . s:test_name_matcher)
     if match(line, '^\s*context') != -1
       let string = "when " . string
     endif
@@ -41,6 +31,17 @@ function! s:find_test_name_in_quotes(max_indent)
     return s:find_test_name_in_quotes(a:max_indent-1) . " " . string
   else
     return s:find_top_level_test()
+  endif
+endfunction
+
+function! s:find_top_level_test()
+  let s:line_no = search('^' . s:test_name_regex, 'bcnW')
+  if s:line_no
+    let line = getline(s:line_no)
+    let string = matchstr(line,'^' . s:test_name_matcher)
+    return string
+  else
+    return ""
   endif
 endfunction
 
@@ -56,12 +57,37 @@ function! jasmine#RunTestInBrowser()
 endfunction
 
 function! s:call_specrunner(test_name)
-	echo "running " . a:test_name
-    let urlEncoded = substitute(a:test_name, "\\s", "%20", "g")
-    let specRunnerPath = 'file:///C:/code/net/git/SMB/Source/Application/SMB/Scripts/app/test/SpecRunner.html'
-    let result = xolox#misc#os#exec({'command': "ansicon phantomjs-1.9.7-windows\\phantomjs.exe phantomjs-testrunner.js \"" . specRunnerPath . "?spec=" . urlEncoded . "&console=1\"", 'check': 0})['stdout']
-    call s:set_signs(result)
-    echo join(result, "\n")
+  echo "running " . a:test_name
+  let urlEncoded = substitute(a:test_name, "\\s", "%20", "g")
+  let specRunnerPath = 'file:///C:/code/net/git/SMB/Source/Application/SMB/Scripts/app/test/SpecRunner.html'
+  let result = xolox#misc#os#exec({'command': "ansicon phantomjs-1.9.7-windows\\phantomjs.exe phantomjs-testrunner.js \"" . specRunnerPath . "?spec=" . urlEncoded . "&console=1\"", 'check': 0})['stdout']
+  call s:set_signs(result)
+  call s:load_first_failure(result)
+  echo join(result, "\n")
+endfunction
+
+function! s:load_first_failure(result_list)
+  let tests_started = 0
+  for result in a:result_list
+    if !tests_started
+      if match(result, "Runner Started\.")
+        let tests_started = 1
+      else
+        continue
+      endif
+    endif
+    let line = matchstr(result, '.*in\sfile:///.*\s(Line\s\zs\d*\ze)')
+    if strlen(line)
+      let file_name = matchstr(result, '.*in\sfile:///\zs.*\ze\s(Line\s\d*)')
+      let current_file = substitute(substitute(expand("%:p"), "\.coffee$", ".js","i"), "\\", "/", "gi")
+	  " echo file_name . ": " . current_file
+	  if !(file_name == current_file && match(expand("%:p"), "\.coffee$"))
+      	  " echo "-- found failed test at line " . line . " in file " . file_name
+      	  exe "e " . file_name
+      	  exe "silent " . line
+  	  endif
+    endif
+  endfor
 endfunction
 
 function! s:set_signs(result_list)
